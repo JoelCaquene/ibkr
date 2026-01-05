@@ -16,7 +16,7 @@
         <div class="saque-card">
             <div class="card-header-saque">
                 <i class="fas fa-university"></i>
-                <h2>A Levantamento</h2>
+                <h2>Levantamento</h2>
                 <div class="balance-badge">
                     Saldo: <span>{{ request.user.available_balance|default:"0.00" }} KZ</span>
                 </div>
@@ -31,8 +31,17 @@
                 </ul>
             {% endif %}
 
+            {# BLOCO DE DOMINGO (ALERTA ORGANIZADO) #}
+            <div id="sunday-warning" style="display: none;">
+                <div class="alert-box-sunday">
+                    <i class="fas fa-calendar-times"></i>
+                    <p><strong>Aviso Importante</strong><br>
+                    Caro cliente, hoje é domingo. O saque está disponível apenas de segunda a sábado. Hoje apenas depósitos estão disponíveis. Obrigado.</p>
+                </div>
+            </div>
+
             {% if not has_bank_details %}
-                <div class="alert-box-saque">
+                <div class="alert-box-saque" id="bank-warning">
                     <i class="fas fa-exclamation-circle"></i> 
                     <p>Adicione suas coordenadas bancárias no Perfil antes de sacar.</p>
                 </div>
@@ -59,8 +68,8 @@
                     <button type="button" class="val-btn" onclick="setAmount(800000)">800.000</button>
                 </div>
 
-                <button type="submit" class="confirm-saque-btn" {% if not has_bank_details %}disabled{% endif %}>
-                    <i class="fas fa-check-double"></i> CONFIRMAR
+                <button type="submit" id="btn-submit-saque" class="confirm-saque-btn" {% if not has_bank_details %}disabled{% endif %}>
+                    <i class="fas fa-check-double"></i> <span>CONFIRMAR</span>
                 </button>
             </form>
 
@@ -72,13 +81,34 @@
 </div>
 
 <style>
+    /* Estilos Adicionais para Domingo */
+    .alert-box-sunday {
+        background: rgba(255, 77, 77, 0.15);
+        border: 1px solid #ff4d4d;
+        color: #ff4d4d;
+        padding: 15px;
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 20px;
+        animation: shake 0.5s ease-in-out;
+    }
+    .alert-box-sunday i { font-size: 1.5rem; margin-bottom: 8px; }
+    .alert-box-sunday p { margin: 0; font-size: 0.9rem; line-height: 1.4; color: #fff; }
+    .alert-box-sunday strong { color: #ff4d4d; text-transform: uppercase; }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+
     /* Fundo Forex Azul Escuro */
     .forex-bg {
         background: radial-gradient(circle at center, #0a192f 0%, #02060c 100%);
         min-height: 100vh;
         display: flex;
         justify-content: center;
-        padding: 10px; /* Reduzido para ganhar espaço lateral */
+        padding: 10px;
         position: relative;
         overflow: hidden;
     }
@@ -94,56 +124,31 @@
 
     .saque-wrapper {
         width: 100%;
-        max-width: 500px; /* Aumentado levemente para melhor estética */
+        max-width: 500px;
         z-index: 2;
         margin-top: 10px;
-    }
-
-    /* Navegação Topo - Apenas Sinal */
-    .top-nav-saque {
-        margin-bottom: 15px;
-        padding-left: 5px;
     }
 
     .btn-back {
         color: #00d4ff;
         text-decoration: none;
-        font-size: 1.5rem; /* Seta maior para facilitar o clique */
+        font-size: 1.5rem;
         display: inline-flex;
         transition: 0.3s;
     }
 
-    .btn-back:hover {
-        color: #fff;
-        transform: translateX(-3px);
-    }
-
-    /* Card de Saque */
     .saque-card {
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(20px);
         border: 1px solid rgba(0, 212, 255, 0.2);
         border-radius: 20px;
-        padding: 25px 15px; /* Ajuste interno para mobile */
+        padding: 25px 15px;
         box-shadow: 0 20px 40px rgba(0,0,0,0.6);
     }
 
-    .card-header-saque {
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-    .card-header-saque i {
-        font-size: 2.2rem;
-        color: #00d4ff;
-        text-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
-    }
-
-    .card-header-saque h2 {
-        color: #fff;
-        font-size: 1.3rem;
-        margin: 10px 0;
-    }
+    .card-header-saque { text-align: center; margin-bottom: 20px; }
+    .card-header-saque i { font-size: 2.2rem; color: #00d4ff; text-shadow: 0 0 15px rgba(0, 212, 255, 0.5); }
+    .card-header-saque h2 { color: #fff; font-size: 1.3rem; margin: 10px 0; }
 
     .balance-badge {
         background: rgba(0, 212, 255, 0.15);
@@ -153,16 +158,6 @@
         border-radius: 50px;
         font-size: 0.85rem;
         border: 1px solid rgba(0, 212, 255, 0.3);
-    }
-
-    /* Estilo do Input Django */
-    .input-section label {
-        display: block;
-        color: #8892b0;
-        margin-bottom: 8px;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
     }
 
     .input-container-custom input {
@@ -177,7 +172,6 @@
         outline: none;
     }
 
-    /* Grade de Valores Otimizada */
     .quick-values-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -194,15 +188,8 @@
         font-size: 0.7rem;
         font-weight: 600;
         cursor: pointer;
-        transition: 0.2s;
     }
 
-    .val-btn:active {
-        background: #00d4ff;
-        color: #02060c;
-    }
-
-    /* Botão Finalizar */
     .confirm-saque-btn {
         width: 100%;
         padding: 16px;
@@ -217,40 +204,22 @@
         justify-content: center;
         align-items: center;
         gap: 10px;
-        box-shadow: 0 10px 20px rgba(0, 114, 255, 0.3);
-        margin-top: 10px;
     }
 
     .confirm-saque-btn:disabled {
-        background: #233554;
-        color: #495670;
+        background: #233554 !important;
+        color: #495670 !important;
+        cursor: not-allowed;
         box-shadow: none;
+        filter: grayscale(1);
     }
 
-    /* Mensagens */
-    .messages-custom {
-        list-style: none;
-        padding: 0;
-        margin-bottom: 15px;
-    }
-
-    .messages-custom li {
-        padding: 10px;
-        border-radius: 8px;
-        text-align: center;
-        font-size: 0.85rem;
-        margin-bottom: 8px;
-    }
-
+    .messages-custom { list-style: none; padding: 0; margin-bottom: 15px; }
+    .messages-custom li { padding: 10px; border-radius: 8px; text-align: center; font-size: 0.85rem; margin-bottom: 8px; }
     .messages-custom .success { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #2ecc71; }
     .messages-custom .error { background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; }
 
-    .min-amount-footer {
-        text-align: center;
-        color: #495670;
-        font-size: 0.75rem;
-        margin-top: 15px;
-    }
+    .min-amount-footer { text-align: center; color: #495670; font-size: 0.75rem; margin-top: 15px; }
 
     .alert-box-saque {
         background: rgba(255, 193, 7, 0.1);
@@ -265,6 +234,34 @@
 </style>
 
 <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const today = new Date();
+        const isSunday = today.getDay() === 0; // 0 é Domingo
+        
+        const submitBtn = document.getElementById('btn-submit-saque');
+        const sundayWarning = document.getElementById('sunday-warning');
+        const bankWarning = document.getElementById('bank-warning');
+        const formSaque = document.getElementById('form-saque');
+
+        if (isSunday) {
+            // Mostrar aviso de domingo
+            sundayWarning.style.display = 'block';
+            
+            // Esconder aviso de banco (opcional para limpar a tela)
+            if (bankWarning) bankWarning.style.display = 'none';
+            
+            // Desativar botão e mudar texto
+            submitBtn.disabled = true;
+            submitBtn.querySelector('span').innerText = "INDISPONÍVEL HOJE";
+            
+            // Impedir envio do formulário
+            formSaque.onsubmit = function(e) {
+                e.preventDefault();
+                return false;
+            };
+        }
+    });
+
     function setAmount(val) {
         const input = document.querySelector('input[name="amount"]');
         if (input) {

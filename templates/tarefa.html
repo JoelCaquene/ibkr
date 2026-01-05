@@ -56,6 +56,11 @@
 
             <div class="display-screen">
                 <div class="scan-line"></div>
+                <div id="sunday-notice" style="display: none; color: #ffcc00; padding: 10px;">
+                    <i class="fa-solid fa-calendar-day" style="font-size: 20px; margin-bottom: 10px;"></i><br>
+                    <strong style="color: #fff;">AVISO DE MERCADO</strong><br>
+                    <small>Caro investidor, hoje é domingo. A tarefa é de segunda a sábado. Hoje o serviço disponível é apenas depósito. Obrigado.</small>
+                </div>
                 <p id="task-message">SISTEMA PRONTO PARA MINERAÇÃO FOREX</p>
                 <div class="progress-container" id="progress-bar-container" style="display: none;">
                     <div class="progress-fill" id="progress-fill"></div>
@@ -85,12 +90,12 @@
 
         <script>
             document.addEventListener("DOMContentLoaded", function() {
-                // --- LÓGICA DO GRÁFICO (FOREX STYLE) ---
+                // --- LÓGICA DO GRÁFICO ---
                 var options = {
                     series: [{ data: [] }],
                     chart: {
                         type: 'area',
-                        height: 200, // Ajustado para telas menores
+                        height: 200,
                         toolbar: { show: false },
                         animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 1000 } }
                     },
@@ -121,9 +126,10 @@
                 setInterval(updateChart, 3000);
                 updateChart();
 
-                // --- LÓGICA DE TAREFAS (DJANGO INTEGRATION) ---
+                // --- LÓGICA DE TAREFAS E BLOQUEIO DE DOMINGO ---
                 const workButton = document.getElementById('work-button');
                 const taskMessage = document.getElementById('task-message');
+                const sundayNotice = document.getElementById('sunday-notice');
                 const lightRed = document.getElementById('light-red');
                 const lightYellow = document.getElementById('light-yellow');
                 const lightGreen = document.getElementById('light-green');
@@ -132,6 +138,10 @@
 
                 let tasksCompletedToday = {{ tasks_completed_today|default:0 }}; 
                 let maxTasks = {{ max_tasks|default:1 }};
+                
+                // VERIFICAÇÃO DE DOMINGO
+                const today = new Date();
+                const isSunday = today.getDay() === 0;
 
                 function updateUI(status) {
                     lightRed.className = 'light';
@@ -148,11 +158,20 @@
                         lightGreen.classList.add('green', 'glow');
                         workButton.disabled = true;
                         workButton.innerHTML = '<i class="fa-solid fa-check"></i> OPERAÇÃO FINALIZADA';
+                    } else if (status === 'sunday') {
+                        workButton.disabled = true;
+                        workButton.style.opacity = "0.5";
+                        workButton.style.filter = "grayscale(1)";
+                        workButton.innerHTML = '<i class="fa-solid fa-ban"></i> MERCADO FECHADO';
+                        taskMessage.style.display = 'none';
+                        sundayNotice.style.display = 'block';
                     }
                 }
 
                 function checkStatus() {
-                    if (tasksCompletedToday >= maxTasks) {
+                    if (isSunday) {
+                        updateUI('sunday');
+                    } else if (tasksCompletedToday >= maxTasks) {
                         taskMessage.textContent = "LIMITE DIÁRIO ALCANÇADO";
                         updateUI('done');
                     } else {
@@ -160,7 +179,7 @@
                     }
                 }
 
-                if (workButton) {
+                if (workButton && !isSunday) {
                     workButton.addEventListener('click', function() {
                         if (tasksCompletedToday < maxTasks) {
                             updateUI('working');
@@ -227,18 +246,17 @@
         margin: 0;
         padding: 0;
         color: var(--text-main);
-        overflow-x: hidden; /* Previne rolagem horizontal */
+        overflow-x: hidden;
     }
 
     .forex-terminal {
         width: 100%;
-        max-width: 480px; /* Limite para não esticar em tablets */
+        max-width: 480px;
         margin: 0 auto;
-        padding: 10px; /* Reduzido para ganhar espaço lateral */
+        padding: 10px;
         box-sizing: border-box;
     }
 
-    /* HEADER */
     .terminal-header {
         display: flex;
         justify-content: space-between;
@@ -270,7 +288,6 @@
     .market-info .pair { font-size: 11px; font-weight: bold; color: var(--text-dim); }
     .market-info .price { font-family: 'JetBrains Mono', monospace; color: var(--accent-green); font-size: 12px; }
 
-    /* GRAFICO */
     .analysis-section {
         background: var(--card-dark);
         border-radius: 12px;
@@ -279,7 +296,6 @@
         border: 1px solid #1e293b;
     }
 
-    /* CARD DE MINERAÇÃO */
     .mining-card {
         background: var(--card-dark);
         border-radius: 15px;
@@ -306,6 +322,11 @@
         overflow: hidden;
         border: 1px solid #1e293b;
         margin-bottom: 15px;
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
     }
 
     .scan-line {
@@ -315,10 +336,9 @@
         animation: scan 3s infinite linear;
     }
 
-    #task-message {
+    #task-message, #sunday-notice small {
         font-family: 'JetBrains Mono', monospace;
         font-size: 13px;
-        color: var(--text-main);
     }
 
     .progress-container {
@@ -362,9 +382,9 @@
         font-weight: 800;
         font-size: 15px;
         cursor: pointer;
+        transition: all 0.3s;
     }
 
-    /* ESTADO BLOQUEADO */
     .lock-card {
         background: var(--card-dark);
         padding: 20px;
